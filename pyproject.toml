@@ -9,7 +9,6 @@ dependencies = [
     "django-environ>=0.13.0",
     "django-modern-rest[jwt]>=0.10.0",
     "environ>=1.0",
-    "jwt>=1.4.0",
     "psycopg>=3.3.4",
     "psycopg2-binary>=2.9.12",
     "pydantic>=2.13.4",
