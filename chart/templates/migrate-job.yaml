@@ -1,0 +1,42 @@
+{{- if .Values.migrations.enabled }}
+# Миграции Django до создания/обновления Deployment: новые поды стартуют уже на актуальной схеме БД.
+# ConfigMap и Secret из ops/ должны быть применены заранее — хук выполняется раньше ресурсов чарта.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "everypay.fullname" . }}-migrate
+  labels:
+    {{- include "everypay.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    # удалить Job от прошлого релиза перед запуском; успешный удалить сразу, упавший оставить для kubectl logs
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "everypay.name" . }}-migrate
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "everypay.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          {{- include "everypay.appEnv" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+          {{- with .Values.web.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

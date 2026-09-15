@@ -75,6 +75,19 @@ collectstatic:
       cpu: "1"
       memory: "256Mi"
 
+# Job с manage.py migrate, запускается хуком pre-install/pre-upgrade
+migrations:
+  enabled: true
+  backoffLimit: 2              # число повторов при падении (например, БД ещё недоступна)
+  activeDeadlineSeconds: 300   # не дольше helm --timeout (по умолчанию 5m)
+  resources:
+    requests:
+      cpu: "1"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
 nginx:
   image:
     repository: nginx
