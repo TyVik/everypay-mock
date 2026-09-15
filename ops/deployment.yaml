@@ -105,32 +105,26 @@ spec:
             limits:
               cpu: "1"
               memory: "512Mi"
-#          startupProbe:
-#            httpGet:
-#              path: /health/live
-#              port: http
-#            failureThreshold: 30
-#            periodSeconds: 2
-#          livenessProbe:
-#            httpGet:
-#              path: /health/live
-#              port: http
-#            periodSeconds: 10
-#            timeoutSeconds: 2
-#            failureThreshold: 3
-#          readinessProbe:
-#            httpGet:
-#              path: /health/ready
-#              port: http
-#            periodSeconds: 10
-#            timeoutSeconds: 2
-#            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /static/admin/css/login.css
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /admin/
+              port: app
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
 
-#          securityContext:
-#            runAsNonRoot: true
-#            runAsUser: 1000
-#            allowPrivilegeEscalation: false
-#            capabilities:
-#              drop: ["ALL"]
-#            seccompProfile:
-#              type: RuntimeDefault
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
