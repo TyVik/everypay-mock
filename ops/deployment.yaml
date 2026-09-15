@@ -50,10 +50,10 @@ spec:
               mountPath: /app/staticfiles   # STATIC_ROOT из config/settings.py
           resources:
             requests:
-              cpu: "100m"
+              cpu: "500m"
               memory: "128Mi"
             limits:
-              cpu: "500m"
+              cpu: "1"
               memory: "256Mi"
 
       containers:
@@ -79,7 +79,7 @@ spec:
               memory: "128Mi"
 
         - name: web
-          image: ghcr.io/tyvik/everypay-mock:sha-c7fe153
+          image: ghcr.io/tyvik/everypay-mock:sha-8f2aa82
           imagePullPolicy: IfNotPresent
           ports:
             - name: app
@@ -108,14 +108,14 @@ spec:
           livenessProbe:
             httpGet:
               path: /static/admin/css/login.css
-              port: http
+              port: 80
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /admin/
-              port: app
+              port: 8000
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
