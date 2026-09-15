@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: everypay
+  labels:
+    app: everypay
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0        # ноль недоступных при обновлении: сначала поднять новый, потом гасить старый
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/tyvik/everypay-mock:sha-c7fe153
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: everypay-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: everypay-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: everypay-secrets
+                  key: SECRET_KEY
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+#          startupProbe:
+#            httpGet:
+#              path: /health/live
+#              port: http
+#            failureThreshold: 30
+#            periodSeconds: 2
+#          livenessProbe:
+#            httpGet:
+#              path: /health/live
+#              port: http
+#            periodSeconds: 10
+#            timeoutSeconds: 2
+#            failureThreshold: 3
+#          readinessProbe:
+#            httpGet:
+#              path: /health/ready
+#              port: http
+#            periodSeconds: 10
+#            timeoutSeconds: 2
+#            failureThreshold: 3
+
+#          securityContext:
+#            runAsNonRoot: true
+#            runAsUser: 1000
+#            allowPrivilegeEscalation: false
+#            capabilities:
+#              drop: ["ALL"]
+#            seccompProfile:
+#              type: RuntimeDefault
