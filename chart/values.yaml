@@ -1,0 +1,106 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# игнорируется, если включён autoscaling: числом подов управляет HPA
+replicaCount: 2
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70   # % от суммы requests.cpu всех контейнеров пода
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0        # ноль недоступных при обновлении: сначала поднять новый, потом гасить старый
+
+image:
+  repository: ghcr.io/tyvik/everypay-mock
+  # по умолчанию берётся appVersion из Chart.yaml
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ConfigMap и Secret чарт не создаёт: они применяются отдельно из ops/
+# (kubectl apply -f ops/configmap.yaml -f ops/secret.yaml)
+# переменные окружения Django
+configMapName: everypay-config
+# ключи POSTGRES_PASSWORD и SECRET_KEY
+secretName: everypay-secrets
+
+web:
+  port: 8000
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
+  livenessProbe:
+    httpGet:
+      path: /static/admin/css/login.css
+      port: 80
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /admin/
+      port: 8000
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+collectstatic:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+nginx:
+  image:
+    repository: nginx
+    tag: "1.28-alpine"
+    pullPolicy: IfNotPresent
+  clientMaxBodySize: 10m
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "32Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+service:
+  type: NodePort
+  port: 80            # порт сервиса внутри кластера
+  nodePort: 30800     # внешний порт на каждом узле: http://192.168.10.201:30800
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: everypay.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

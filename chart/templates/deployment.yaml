@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "everypay.fullname" . }}
+  labels:
+    {{- include "everypay.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "everypay.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  template:
+    metadata:
+      annotations:
+        # перезапуск подов при изменении конфига nginx; после изменений ConfigMap/Secret из ops/
+        # поды нужно перезапустить вручную: kubectl rollout restart deployment/everypay
+        checksum/nginx: {{ include (print $.Template.BasePath "/nginx-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "everypay.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: static           # общий каталог статики: пишет init-контейнер, читает nginx
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: {{ include "everypay.fullname" . }}-nginx
+
+      initContainers:
+        - name: collectstatic
+          image: {{ include "everypay.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "manage.py", "collectstatic", "--noinput"]
+          {{- include "everypay.appEnv" . | nindent 10 }}
+          volumeMounts:
+            - name: static
+              mountPath: /app/staticfiles   # STATIC_ROOT из config/settings.py
+          resources:
+            {{- toYaml .Values.collectstatic.resources | nindent 12 }}
+
+      containers:
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: static
+              mountPath: /var/www/static
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          resources:
+            {{- toYaml .Values.nginx.resources | nindent 12 }}
+
+        - name: web
+          image: {{ include "everypay.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: app
+              containerPort: {{ .Values.web.port }}
+          {{- include "everypay.appEnv" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          {{- with .Values.web.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.web.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.web.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: everypay
+description: EveryPay mock (Django + nginx)
+type: application
+version: 0.1.0
+appVersion: "sha-8f2aa82"
