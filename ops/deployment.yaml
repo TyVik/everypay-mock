@@ -19,12 +19,70 @@ spec:
       labels:
         app: web
     spec:
+      volumes:
+        - name: static           # общий каталог статики: пишет init-контейнер, читает nginx
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: everypay-nginx
+
+      initContainers:
+        - name: collectstatic
+          image: ghcr.io/tyvik/everypay-mock:sha-c7fe153
+          imagePullPolicy: IfNotPresent
+          command: ["python", "manage.py", "collectstatic", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: everypay-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: everypay-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: everypay-secrets
+                  key: SECRET_KEY
+          volumeMounts:
+            - name: static
+              mountPath: /app/staticfiles   # STATIC_ROOT из config/settings.py
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
       containers:
+        - name: nginx
+          image: nginx:1.28-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: static
+              mountPath: /var/www/static
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
         - name: web
           image: ghcr.io/tyvik/everypay-mock:sha-c7fe153
           imagePullPolicy: IfNotPresent
           ports:
-            - name: http
+            - name: app
               containerPort: 8000
           envFrom:
             - configMapRef:
