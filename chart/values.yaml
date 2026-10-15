@@ -20,7 +20,7 @@ strategy:
     maxUnavailable: 0        # ноль недоступных при обновлении: сначала поднять новый, потом гасить старый
 
 image:
-  repository: ghcr.io/tyvik/everypay-mock
+  repository: tyvik/everypay-mock
   # по умолчанию берётся appVersion из Chart.yaml
   tag: ""
   pullPolicy: IfNotPresent
