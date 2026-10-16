@@ -22,6 +22,7 @@ build:
     DOCKERHUB_USERNAME: tyvik
     IMAGE: docker.io/tyvik/everypay-mock
     CACHE_REF: $IMAGE:buildcache
+  tags: ["kubernates"]
   before_script:
     - docker buildx create --use --driver docker-container
     - echo "$DOCKERHUB_TOKEN" | docker login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin
